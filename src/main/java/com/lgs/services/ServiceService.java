@@ -136,7 +136,7 @@ public class ServiceService {
         return service;
     }
 	  
-
+ 
     // Finalizar serviço
     public com.lgs.entities.Service finalizarServico(Long serviceId, Rating clienteRating) {
         com.lgs.entities.Service service = serviceRepository.findById(serviceId)
