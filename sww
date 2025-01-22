@@ -1,0 +1,77 @@
+[33mcommit e5954f1b7efbb1995c9fa7585250e0423fd2e71e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m)[m
+Author: Leonardo Siqueira <leonardo.gabriel01@hotmail.com>
+Date:   Mon Jan 6 13:57:34 2025 -0300
+
+    update filtrar servicos
+
+[33mcommit 78201cb697c928bf3f6b5acf13cdac2f0db2c5e6[m
+Author: Leonardo Siqueira <leonardo.gabriel01@hotmail.com>
+Date:   Fri Jan 3 14:24:04 2025 -0300
+
+    Adicionando funcao de deletar servico
+
+[33mcommit bdf6cb3b4138f00ec8a8cbffd5ed33ec590a1c65[m
+Author: Leonardo Siqueira <leonardo.gabriel01@hotmail.com>
+Date:   Sat Dec 28 13:12:58 2024 -0300
+
+    update
+
+[33mcommit dfd9c09851f2137700430798cf7c086498fdd19f[m
+Author: Leonardo Siqueira <leonardo.gabriel01@hotmail.com>
+Date:   Fri Dec 27 13:15:05 2024 -0300
+
+    atualizando parte de mostrar servicos na tela
+
+[33mcommit 946dc2dd261426835bb0ad786f399b1e8d7f2d2f[m
+Author: Leonardo Siqueira <leonardo.gabriel01@hotmail.com>
+Date:   Mon Dec 23 16:15:28 2024 -0300
+
+    corrigido cadastro
+
+[33mcommit 39079510be3b44f2c19efa04ab14d05b70095abe[m
+Author: Leonardo Siqueira <leonardo.gabriel01@hotmail.com>
+Date:   Tue Dec 17 14:40:52 2024 -0300
+
+    Adicionando dados do user id para retornar no front
+
+[33mcommit 540fa733b8eba6048e824bead49b86674c0c7ee7[m
+Author: Leonardo Siqueira <leonardo.gabriel01@hotmail.com>
+Date:   Mon Dec 16 11:00:44 2024 -0300
+
+    update
+
+[33mcommit 2ff452f878f5ca47a4dd9989e9f19c51dca89ddb[m
+Author: Leonardo Siqueira <leonardo.gabriel01@hotmail.com>
+Date:   Mon Dec 16 10:28:27 2024 -0300
+
+    atualizacao importante
+
+[33mcommit 00cfa5a5da33a15d42654525bc9b4148a87663fe[m
+Author: Leonardo Siqueira <leonardo.gabriel01@hotmail.com>
+Date:   Fri Dec 13 10:15:05 2024 -0300
+
+    update
+
+[33mcommit 06f7d0051b36ee9a6c9a26232b9f4cdccdc3f46a[m
+Author: Leonardo Siqueira <leonardo.gabriel01@hotmail.com>
+Date:   Fri Dec 13 09:45:11 2024 -0300
+
+    update melhorias
+
+[33mcommit 825b6405c1d96e6d6b1c2625ee1306520f6d31d3[m
+Author: Leonardo Siqueira <leonardo.gabriel01@hotmail.com>
+Date:   Fri Dec 13 09:18:47 2024 -0300
+
+    adicionando spring security e token jwt
+
+[33mcommit 5a9f674e051625693115fc8705a55f7edf18e9ba[m
+Author: Leonardo Siqueira <leonardo.gabriel01@hotmail.com>
+Date:   Tue Dec 10 11:28:26 2024 -0300
+
+    update telas
+
+[33mcommit c43a7df863b2e399e3cfcd4a18911d2391f55639[m[33m ([m[1;32mmain[m[33m)[m
+Author: Leonardo Siqueira <leonardo.gabriel01@hotmail.com>
+Date:   Mon Dec 9 13:58:43 2024 -0300
+
+    update

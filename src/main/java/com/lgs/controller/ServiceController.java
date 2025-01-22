@@ -1,0 +1,373 @@
+package com.lgs.controller;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.lgs.dto.ApiResponse;
+import com.lgs.dto.RatingDTO;
+import com.lgs.dto.ServiceDTO;
+import com.lgs.entities.Client;
+import com.lgs.entities.Rating;
+import com.lgs.entities.Service;
+import com.lgs.entities.User;
+import com.lgs.repositories.ClientRepository;
+import com.lgs.repositories.ServiceRepository;
+import com.lgs.repositories.UserRepository;
+import com.lgs.security.TokenService;
+import com.lgs.services.ServiceService;
+
+import jakarta.validation.Valid;
+
+@RestController
+@RequestMapping("/api/services")
+public class ServiceController {
+	
+
+    @Autowired
+    private ServiceService serviceService;
+
+    @Autowired
+    private TokenService tokenService;
+    
+    @Autowired
+    private ServiceRepository ServiceRepository;
+    @Autowired
+    private UserRepository UserRepository;
+    
+    @Autowired
+    private ClientRepository clientRepository;
+
+    
+    
+    // Método para criar serviço, passando o e-mail para buscar o cliente pelo e-mail
+    @PostMapping("/{email}")
+    public ResponseEntity<Service> createService(@PathVariable("email") String email, @RequestBody Service service) {
+        try {
+            // Busca o cliente pelo e-mail
+            Optional<Client> clientOptional = clientRepository.findByEmail(email);
+            
+            // Verifica se o cliente foi encontrado
+            if (clientOptional.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null); // Cliente não encontrado
+            }
+
+            // Obtém o id do cliente
+            Long clientId = clientOptional.get().getId();
+
+            // Cria o serviço para o cliente usando o id
+            service = serviceService.criarServico(service, clientId);
+
+            return new ResponseEntity<>(service, HttpStatus.CREATED);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+    @PreAuthorize("hasRole('CLIENT')")
+    @DeleteMapping("/{serviceId}")
+    public ResponseEntity<?> deleteService(@PathVariable("serviceId") Long serviceId, 
+ @AuthenticationPrincipal User user) {
+        Optional<Service> serviceOptional = ServiceRepository.findById(serviceId);
+
+        if (serviceOptional.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiResponse(false, "Serviço não encontrado"));
+        }
+
+        Service service = serviceOptional.get();
+
+        if (!service.getClient().getId().equals(user.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new ApiResponse(false, "Você não tem permissão para excluir este serviço"));
+        }
+        ServiceRepository.deleteById(serviceId);
+        return ResponseEntity.ok(new ApiResponse(true, "Serviço excluído com sucesso"));
+    }
+
+    @PreAuthorize("hasRole('CLIENT')")
+    @PutMapping("/{serviceId}/vincularProfissional/{professionalId}")
+    public ResponseEntity<String> vincularProfissionalComAceite(
+            @PathVariable("serviceId") Long serviceId,
+            @PathVariable("professionalId") Long professionalId) {
+        try {
+            // Chama o método do serviço para vincular o profissional
+            serviceService.vincularProfissionalComAceite(serviceId, professionalId);
+
+            // Retorna uma resposta de sucesso
+            return ResponseEntity.ok("O profissional foi notificado para aceitar ou recusar o serviço.");
+        } catch (RuntimeException e) {
+            // Retorna erro de validação de negócio
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (Exception e) {
+            // Retorna erro genérico
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao processar a solicitação.");
+        }
+    }
+
+
+    
+    @PreAuthorize("hasRole('CLIENT')")
+    @GetMapping("/{id}")
+    public ResponseEntity<ServiceDTO> getServiceById(@PathVariable("id") Long id) {
+        ServiceDTO service = serviceService.findById(id);
+        if (service == null) {
+            return ResponseEntity.notFound().build(); // Retorna 404 se o serviço não for encontrado
+        }
+        return ResponseEntity.ok(service); // Retorna 200 com os detalhes do serviço
+    }
+    
+    @GetMapping("/{serviceId}/status")
+    public ResponseEntity<?> getServiceStatus(@PathVariable Long serviceId) {
+        try {
+            com.lgs.entities.Service service = (Service) serviceService.getServiceById(serviceId);
+            return ResponseEntity.ok(service);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+    
+    @PreAuthorize("hasRole('CLIENT')")
+    @PutMapping("/{serviceId}/finalizar")
+    public ResponseEntity<Service> finalizarServico(@PathVariable("serviceId") Long serviceId, @RequestBody Rating clienteRating) {
+        try {
+            Service service = serviceService.finalizarServico(serviceId, clienteRating);
+            return ResponseEntity.ok(service);
+        } catch (Exception e) {
+           System.out.println( e.getMessage());
+            return ResponseEntity.status(500).build();
+        }
+    }
+
+    
+    
+    @PreAuthorize("hasRole('CLIENT')")
+    @PutMapping("/{serviceId}")
+    public ResponseEntity<Service> atualizarServico(
+        @PathVariable("serviceId") Long serviceId, // Anotação explícita
+        @RequestBody Service serviceAtualizado,
+        @RequestHeader("Authorization") String authorizationHeader) {
+        try {
+            // Verificar se o token foi fornecido
+            if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null); // Token não fornecido ou inválido
+            }
+
+            String token = authorizationHeader.substring(7); // Remove "Bearer "
+            String email = tokenService.extractEmail(token);
+
+            if (email == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null); // Token inválido
+            }
+
+            Optional<Client> clientOptional = clientRepository.findByEmail(email);
+            if (clientOptional.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null); // Cliente não encontrado
+            }
+
+            Client client = clientOptional.get();
+
+            // Verificar se o serviço pertence ao cliente
+            Optional<Service> serviceOptional = ServiceRepository.findById(serviceId);
+            if (serviceOptional.isEmpty() || !serviceOptional.get().getClient().equals(client)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null); // Serviço não encontrado ou não pertence ao cliente
+            }
+
+            // Atualiza as informações do serviço
+            Service serviceExistente = serviceOptional.get();
+            serviceExistente.setName(serviceAtualizado.getName());
+            serviceExistente.setDescription(serviceAtualizado.getDescription());
+            serviceExistente.setLocation(serviceAtualizado.getLocation());
+            serviceExistente.setSpecialty(serviceAtualizado.getSpecialty());
+            	
+            // Salva o serviço atualizado
+            ServiceRepository.save(serviceExistente);
+            return ResponseEntity.ok(serviceExistente); // Retorna o serviço atualizado
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null); // Erro interno do servidor
+        }
+    }
+
+
+    // Aceitar Serviço - Somente PROFESSIONAL pode aceitar um serviço
+    @PreAuthorize("hasRole('PROFESSIONAL')")
+    @PutMapping("/{serviceId}/aceitar")
+    public ResponseEntity<Service> aceitarServico(@PathVariable Long serviceId) {
+        try {
+            Service service = serviceService.aceitarServico(serviceId);
+            return ResponseEntity.ok(service);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
+    }
+    
+
+
+
+
+    @PreAuthorize("hasRole('CLIENT')")
+    @GetMapping("/me")
+    public ResponseEntity<?> listarServicosDoCliente(@RequestHeader("Authorization") String authorizationHeader) {
+        try {
+            // Verificar se o token foi passado no header
+            if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token não fornecido ou inválido.");
+            }
+
+            // Extrair o token
+            String token = authorizationHeader.substring(7); // Remove o prefixo "Bearer "
+            
+            // Validar o token e extrair o e-mail
+            String email = tokenService.extractEmail(token);
+            if (email == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token inválido.");
+            }
+
+            // Busca o cliente pelo e-mail
+            Optional<Client> clientOptional = clientRepository.findByEmail(email);
+            if (clientOptional.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Cliente não encontrado.");
+            }
+
+            // Busca os serviços associados ao cliente
+            Long clientId = clientOptional.get().getId();
+            List<Service> servicos = serviceService.listarServicosPorCliente(clientId);
+
+            return ResponseEntity.ok(servicos);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao listar serviços: " + e.getMessage());
+        }
+          
+    }
+    
+    
+    
+    @GetMapping
+    public ResponseEntity<?> listarTodosServicos(
+            @RequestParam(value = "cidades", required = false) List<String> cidades,
+            @RequestParam(value = "especialidade", required = false) String especialidade) {
+        try {
+            // Lista todos os serviços inicialmente
+            List<Service> servicos = serviceService.listarTodosServicos();
+            // Filtrar apenas serviços com status ABERTO
+            servicos = servicos.stream()
+                    .filter(service -> service.getStatus() == Service.ServiceStatus.ABERTO)
+                    .collect(Collectors.toList());
+
+            // Filtrando por cidade
+            if (cidades != null && !cidades.isEmpty()) {
+                List<Service> servicosCidade = servicos.stream()
+                        .filter(service -> {
+                            String cityFromAddress = getCityFromAddress(service.getLocation());
+                            return cidades.stream().anyMatch(city -> city.equalsIgnoreCase(cityFromAddress));
+                        })
+                        .collect(Collectors.toList());
+
+                // Se não encontrar serviços na cidade, buscar serviços no estado
+                if (servicosCidade.isEmpty()) {
+                    servicos = servicos.stream()
+                            .filter(service -> {
+                                String stateFromAddress = getStateFromAddress(service.getLocation());
+                                System.out.println("Estado do serviço: " + stateFromAddress);  // Log para debug
+                                return cidades.stream().anyMatch(city -> city.equalsIgnoreCase(stateFromAddress));
+                            })
+                            .collect(Collectors.toList());
+                } else {
+                    // Se houver serviços na cidade, use a lista filtrada
+                    servicos = servicosCidade;
+                }
+            }
+
+            // Filtrar por especialidade se o parâmetro estiver presente
+            if (especialidade != null && !especialidade.isBlank()) {
+                System.out.println("Filtrando por especialidade: " + especialidade);
+                servicos = servicos.stream()
+                        .filter(service -> especialidade.equalsIgnoreCase(service.getSpecialty()))
+                        .collect(Collectors.toList());
+            }
+
+            return ResponseEntity.ok(servicos);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao listar serviços: " + e.getMessage());
+        }
+    }
+ // Método para extrair a cidade do endereço
+    private String getCityFromAddress(String location) {
+        if (location != null) {
+            // Dividir o endereço pela vírgula
+            String[] parts = location.split(",");
+            if (parts.length >= 3) {
+                // O terceiro campo após a vírgula é a cidade (parte do meio)
+                String city = parts[2].trim();
+
+                // Remover o estado, caso o nome da cidade contenha " - "
+                if (city.contains("-")) {
+                    city = city.split("-")[0].trim(); // Extrai a cidade sem o estado
+                }
+
+                return city.isEmpty() ? "" : city; // Retorna vazio se a cidade não for encontrada
+            }
+        }
+        return ""; // Retorna vazio caso não encontre a cidade
+    }
+
+
+    // Método para extrair o estado do endereço
+    private String getStateFromAddress(String location) {
+        if (location != null) {
+            // Dividir o endereço pela vírgula
+            String[] parts = location.split(",");
+            if (parts.length >= 3) {
+                String state = parts[2].trim();
+
+                // Ajustar caso o estado tenha cidade combinada (ex: "Santos - SP")
+                if (state.contains("-")) {
+                    String[] stateParts = state.split("-");
+                    if (stateParts.length > 1) {
+                        state = stateParts[1].trim(); // Extrai apenas a parte do estado
+                    }
+                }
+
+                return state.isEmpty() ? "" : state; // Retorna vazio se o estado não for encontrado
+            }
+        }
+        return ""; // Retorna vazio caso não encontre o estado
+    }
+    
+    @PostMapping("/{serviceId}/professional/{professionalEmail}/rate-client")
+    public ResponseEntity<String> avaliarCliente(
+            @PathVariable("serviceId") Long serviceId,
+            @PathVariable("professionalEmail") String professionalEmail,
+            @RequestBody RatingDTO	 ratingDTO
+    ) {
+        try {
+            // Chama o método do serviço para avaliar o cliente
+            serviceService.avaliarCliente(serviceId, professionalEmail, ratingDTO.getRating(), ratingDTO.getComment());
+
+            // Retorna uma resposta de sucesso
+            return ResponseEntity.ok("Avaliação registrada com sucesso!");
+        } catch (Exception e) {
+            // Retorna um erro se algo falhar
+            return ResponseEntity.status(400).body("Erro ao registrar a avaliação: " + e.getMessage());
+        }
+    }
+
+    
+}
