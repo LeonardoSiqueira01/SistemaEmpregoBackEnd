@@ -39,6 +39,7 @@ public class Service {
     
     private List<Long> solicitacoesVinculacaoProfessional = new ArrayList<>();
 
+    private Double ratedClient = 0.0; 
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.EAGER)
@@ -82,7 +83,14 @@ public class Service {
 	}
 
 	
-	
+	public Double getRatedClient() {
+		return ratedClient;
+	}
+
+	public void setRatedClient(Double ratedClient) {
+		this.ratedClient = ratedClient;
+	}
+
 	public String getProfessionalName() {
 		return professionalName;
 	}

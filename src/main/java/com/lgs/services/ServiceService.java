@@ -399,7 +399,8 @@ public class ServiceService {
             ratingToUpdate.setRatedClient(rating);
             ratingToUpdate.setCommentaryForClient(comment);
             ratingRepository.save(ratingToUpdate);
-            
+            service.setRatedClient(rating);
+            serviceRepository.save(service);
         } else {
             // Caso contrário, criar uma nova avaliação
             Professional professional = service.getProfessional();
@@ -411,6 +412,7 @@ public class ServiceService {
             newRating.setProfessional(professional);
             newRating.setRatedClient(rating); // Avaliação feita pelo profissional sobre o cliente
             newRating.setService(service);
+            service.setRatedClient(rating);
 
             ratingRepository.save(newRating);
 
