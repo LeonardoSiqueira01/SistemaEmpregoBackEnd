@@ -38,6 +38,7 @@ public interface ServiceRepository extends JpaRepository<Service, Long> {
     List<Service> findByProfessional(Professional professional); 
     boolean existsByProfessionalAndStatusNot(Professional professional, ServiceStatus status);
 
+    List<Service> findByClientIdAndSpecialty(Long clientId, String specialty);
 
 }
 

@@ -442,5 +442,7 @@ public class ServiceService {
         client.setAverageRating(count > 0 ? totalAvaliacao / count : 0.0);
     }
 
-
+	   public List<com.lgs.entities.Service> listarServicosPorEspecialidade(Long clientId, String specialty) {
+	        return serviceRepository.findByClientIdAndSpecialty(clientId, specialty);
+	    }
 }

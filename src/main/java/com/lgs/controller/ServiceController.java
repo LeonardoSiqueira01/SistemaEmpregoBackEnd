@@ -218,11 +218,11 @@ public class ServiceController {
     
 
 
-
-
     @PreAuthorize("hasRole('CLIENT')")
     @GetMapping("/me")
-    public ResponseEntity<?> listarServicosDoCliente(@RequestHeader("Authorization") String authorizationHeader) {
+    public ResponseEntity<?> listarServicosDoCliente(
+        @RequestHeader("Authorization") String authorizationHeader,
+        @RequestParam(value = "specialty", required = false) String specialty) {
         try {
             // Verificar se o token foi passado no header
             if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
@@ -231,7 +231,7 @@ public class ServiceController {
 
             // Extrair o token
             String token = authorizationHeader.substring(7); // Remove o prefixo "Bearer "
-            
+
             // Validar o token e extrair o e-mail
             String email = tokenService.extractEmail(token);
             if (email == null) {
@@ -244,20 +244,25 @@ public class ServiceController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Cliente não encontrado.");
             }
 
-            // Busca os serviços associados ao cliente
+            // Buscar serviços do cliente
             Long clientId = clientOptional.get().getId();
-            List<Service> servicos = serviceService.listarServicosPorCliente(clientId);
+            List<Service> services;
 
-            return ResponseEntity.ok(servicos);
+            // Se a especialidade for fornecida, filtra os serviços por especialidade
+            if (specialty != null && !specialty.isEmpty()) {
+                services = serviceService.listarServicosPorEspecialidade(clientId, specialty);
+            } else {
+                services = serviceService.listarServicosPorCliente(clientId);
+            }
+
+            return ResponseEntity.ok(services);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Erro ao listar serviços: " + e.getMessage());
         }
-          
     }
-    
-    
-    
+
+
     @GetMapping
     public ResponseEntity<?> listarTodosServicos(
             @RequestParam(value = "cidades", required = false) List<String> cidades,
