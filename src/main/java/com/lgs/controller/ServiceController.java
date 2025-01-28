@@ -26,6 +26,7 @@ import com.lgs.dto.ServiceDTO;
 import com.lgs.entities.Client;
 import com.lgs.entities.Rating;
 import com.lgs.entities.Service;
+import com.lgs.entities.Service.ServiceStatus;
 import com.lgs.entities.User;
 import com.lgs.repositories.ClientRepository;
 import com.lgs.repositories.ServiceRepository;
@@ -255,12 +256,34 @@ public class ServiceController {
                 services = serviceService.listarServicosPorCliente(clientId);
             }
 
+            // Ordena os serviços com base no status (ABERTO -> INICIADO -> FINALIZADO)
+            services.sort((s1, s2) -> {
+                int statusPriority1 = getStatusPriority(s1.getStatus());
+                int statusPriority2 = getStatusPriority(s2.getStatus());
+                return Integer.compare(statusPriority1, statusPriority2);
+            });
+
             return ResponseEntity.ok(services);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Erro ao listar serviços: " + e.getMessage());
         }
     }
+
+    // Método auxiliar para obter a prioridade do status
+    private int getStatusPriority(ServiceStatus serviceStatus) {
+        switch (serviceStatus) {
+            case ABERTO:
+                return 1;
+            case INICIADO:
+                return 2;
+            case FINALIZADO:
+                return 3;
+            default:
+                return Integer.MAX_VALUE; // Se houver outro status desconhecido
+        }
+    }
+
 
 
     @GetMapping
