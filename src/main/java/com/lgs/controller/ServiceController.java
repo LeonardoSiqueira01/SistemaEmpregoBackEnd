@@ -21,19 +21,23 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.lgs.dto.ApiResponse;
+import com.lgs.dto.ProfessionalDTO;
 import com.lgs.dto.RatingDTO;
 import com.lgs.dto.ServiceDTO;
 import com.lgs.entities.Client;
+import com.lgs.entities.Professional;
 import com.lgs.entities.Rating;
 import com.lgs.entities.Service;
 import com.lgs.entities.Service.ServiceStatus;
 import com.lgs.entities.User;
 import com.lgs.repositories.ClientRepository;
+import com.lgs.repositories.ProfessionalRepository;
 import com.lgs.repositories.ServiceRepository;
 import com.lgs.repositories.UserRepository;
 import com.lgs.security.TokenService;
 import com.lgs.services.ServiceService;
 
+import jakarta.mail.MessagingException;
 import jakarta.validation.Valid;
 
 @RestController
@@ -55,7 +59,10 @@ public class ServiceController {
     @Autowired
     private ClientRepository clientRepository;
 
-    
+
+    @Autowired
+    private ProfessionalRepository professionalRepository;
+
     
     // Método para criar serviço, passando o e-mail para buscar o cliente pelo e-mail
     @PostMapping("/{email}")
@@ -396,6 +403,78 @@ public class ServiceController {
             return ResponseEntity.status(400).body("Erro ao registrar a avaliação: " + e.getMessage());
         }
     }
+    @PreAuthorize("hasRole('PROFESSIONAL')")
+    @PostMapping("/{professionalEmail}/solicitar/{serviceId}")
+    public ResponseEntity<?> solicitarServicoAoCliente(
+            @PathVariable("professionalEmail") String professionalEmail, // Email do profissional
+            @PathVariable("serviceId") Long serviceId) {         // ID do cliente ao qual o profissional quer fazer a solicitação
+
+        try {
+            // Verificar se o profissional existe pelo email
+            Professional professional = professionalRepository.findByEmail(professionalEmail)
+                    .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
+
+            // Chama o serviço para o profissional solicitar o serviço ao cliente
+            com.lgs.entities.Service service = serviceService.solicitarServicoAoCliente(professional.getId(), serviceId);
+
+            // Retorna resposta com status 200 OK e o serviço solicitado
+            return ResponseEntity.ok(service);
+
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Erro ao solicitar serviço: " + e.getMessage());
+        } catch (MessagingException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao enviar e-mail: " + e.getMessage());
+        }
+    }
+    @PostMapping("/{ProfessionalEmail}/services/{serviceId}/accept")
+    public ResponseEntity<?> aceitarServico(@PathVariable("ProfessionalEmail") String ProfessionalEmail, @PathVariable("serviceId") Long serviceId) throws MessagingException {
+        try {
+            // Chama o serviço para aceitar o serviço
+            serviceService.aceitarOuRecusarSolicitacao(serviceId, ProfessionalEmail, true); // Passa 'true' para aceitar
+            return ResponseEntity.ok("Serviço aceito com sucesso!");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/{ProfessionalEmail}/services/{serviceId}/reject")
+    public ResponseEntity<?> recusarServico(@PathVariable("ProfessionalEmail") String ProfessionalEmail, @PathVariable("serviceId") Long serviceId) throws MessagingException {
+        try {
+            // Chama o serviço para recusar o serviço
+            serviceService.aceitarOuRecusarSolicitacao(serviceId, ProfessionalEmail, false); // Passa 'false' para recusar
+            return ResponseEntity.ok("Serviço recusado com sucesso!");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 
     
+    @PreAuthorize("hasRole('CLIENT')")
+    @GetMapping("/{serviceId}/profissionais")
+    public List<ProfessionalDTO> listarProfissionaisVinculados(@PathVariable("serviceId") Long serviceId) {
+        // Buscar o serviço pelo ID
+        Service service = ServiceRepository.findById(serviceId)
+                .orElseThrow(() -> new RuntimeException("Serviço não encontrado"));
+
+        // Chamar o método na classe Service para listar os IDs dos profissionais vinculados
+        List<Professional> profissionais = service.listarProfissionaisVinculados(professionalRepository);
+
+        // Mapear a lista de profissionais para ProfessionalDTO
+        List<ProfessionalDTO> professionalDTOs = profissionais.stream().map(professional -> {
+            return new ProfessionalDTO(
+                    serviceId, professional.getName(),
+                    professional.getEmail(),
+                    professional.getTotalServicesCompleted(),
+                    professional.getAverageRating(),
+                    professional.isAvailable(),
+                    professional.getSpecialties(),
+                    professional.getLocation()
+            );
+        }).collect(Collectors.toList());
+
+        // Retorna a lista de ProfessionalDTO
+        return professionalDTOs;
+    }
+
+ 
 }

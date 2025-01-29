@@ -48,7 +48,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/services/{serviceId}/finalizar").hasAuthority("CLIENT")
                         .requestMatchers(HttpMethod.GET, "/api/client").hasAuthority("CLIENT")
                         .requestMatchers(HttpMethod.PUT, "/api/services/{serviceId}/avaliarCliente").hasAuthority("PROFESSIONAL")
-
+                        .requestMatchers(HttpMethod.POST, "/api/services/{professionalEmail}/solicitar/{serviceId}").hasAuthority("PROFESSIONAL")
+                        .requestMatchers(HttpMethod.GET, "/api/services/{serviceId}/profissionais").hasAuthority("CLIENT")
+                        .requestMatchers(HttpMethod.POST, "api/services/{ProfessionalEmail}/services/{serviceId}/reject").hasAuthority("CLIENT")
+                        .requestMatchers(HttpMethod.POST, "api/services/{ProfessionalEmail}/services/{serviceId}/accept").hasAuthority("CLIENT")
 
                         .anyRequest().authenticated()
                 )

@@ -3,12 +3,16 @@ package com.lgs.entities;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.lgs.dto.ProfessionalServiceStatus;
+import com.lgs.repositories.ProfessionalRepository;
 
 @Entity
 public class Service {
@@ -48,11 +52,14 @@ public class Service {
 
     private String professionalName;
     private String professionalEmail;
+    private Integer totalProfessionalRequested = 0; 
 
     @Enumerated(EnumType.STRING)
     private ServiceStatus status;
      
     private String specialty;
+    
+    private Set<Long> solicitacoesVinculacaoServico = new HashSet<>();
 
 
     @OneToMany(mappedBy = "service" )
@@ -65,7 +72,10 @@ public class Service {
     @Enumerated(EnumType.STRING)
     private ProfessionalServiceStatus serviceStatus = ProfessionalServiceStatus.ABERTO;
 
-    // Getters e Setters
+    public Service() {
+        solicitacoesVinculacaoServico = new HashSet<>();
+    }
+    
     public Long getId() {
         return id;
     }
@@ -209,4 +219,28 @@ public class Service {
 	public void IdsSolicitacoesDeVinculacao(Long idProfessional) {
 		this.solicitacoesVinculacaoProfessional.add(idProfessional);
 	}
+	
+	   public void addIdsSolicitacoesDeVinculacao(Long idServico) {
+	        solicitacoesVinculacaoServico.add(idServico);
+	    }
+
+	    public void addTotalProfessionalRequested() {
+	        this.totalProfessionalRequested = totalProfessionalRequested+1;
+	    }
+
+	    
+	    public List<Professional> listarProfissionaisVinculados(ProfessionalRepository professionalRepository) {
+	
+	        return solicitacoesVinculacaoServico.stream()
+	                .map(id -> professionalRepository.findById(id).orElse(null)) // Procura o profissional pelo ID
+	                .filter(prof -> prof != null) // Filtra para não retornar nulo
+	                .collect(Collectors.toList()); // Retorna uma lista de profissionais
+	    }
+	    
+	    public void removerSolicitacaoVinculacao(Long idServico) {
+	        if (this.solicitacoesVinculacaoServico != null && solicitacoesVinculacaoServico.contains(idServico)) {
+	            solicitacoesVinculacaoServico.remove(idServico);
+	        }
+	    }
+
 }

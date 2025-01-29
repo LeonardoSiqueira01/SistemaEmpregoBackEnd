@@ -21,7 +21,8 @@ public class Professional extends User {
     private Double averageRating = 0.0;
     private boolean available =true;
     private Integer totalServicesRequested = 0; 
-
+    private Integer servicosQueSolicitouParticipacao = 0;
+    
     @Column(name = "specialties", nullable = true)
     private String specialties;
     
@@ -146,5 +147,14 @@ public class Professional extends User {
         this.totalServicesRequested++;
     }
 
+    public void solicitacoesParaCliente( ) {
+    	servicosQueSolicitouParticipacao = servicosQueSolicitouParticipacao+ 1;
+    }
+
+	public Integer getServicosQueSolicitouParticipacao() {
+		return servicosQueSolicitouParticipacao;
+	}
+    
+    
     
 }

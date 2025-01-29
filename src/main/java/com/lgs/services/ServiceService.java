@@ -343,7 +343,62 @@ public class ServiceService {
     }
 
 
- 
+
+	   public void aceitarOuRecusarSolicitacao(Long serviceId, String professionalEmail, boolean aceitar) throws MessagingException {
+		    // Buscar o serviço e o cliente
+		    com.lgs.entities.Service service = serviceRepository.findById(serviceId)
+		            .orElseThrow(() -> new RuntimeException("Serviço não encontrado"));
+
+		    Professional prof = professionalRepository.findByEmail(professionalEmail)
+		            .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
+
+		    // Verificar o status do serviço
+		    if (service.getStatus() != ServiceStatus.ABERTO) {
+		        throw new RuntimeException("Somente serviços que estão em aberto podem ser aceitos ou recusados.");
+		    }
+
+		    // Lógica de aceitação ou recusa
+		    if (aceitar) {
+		        // O cliente aceita a solicitação
+		        service.setStatus(ServiceStatus.INICIADO); // Alterar status para ACEITO
+		        service.setInicioServico(LocalDate.now()); // Definir a data de início do serviço
+
+		        // Marcar o profissional como não disponível
+		        prof.solicitacoesParaCliente();
+		        prof.setAvailable(false);
+		        service.setProfessional(prof);
+		        service.setProfessionalEmail(prof.getEmail());
+		        service.setProfessionalName(prof.getName());
+		        service.setServiceStatus(ProfessionalServiceStatus.ACEITO);
+		        prof.addIdsSolicitacoesDeVinculacao(serviceId);
+		        professionalRepository.save(prof);
+		        serviceRepository.save(service);
+		        // Enviar notificação para o profissional
+		        try {
+		            emailService.enviarNotificacaoParaProfissional2(prof, service);
+		        } catch (MessagingException e) {
+		            throw new RuntimeException("Erro ao enviar e-mail para o profissional", e);
+		        }
+
+		    } else {
+		        // O cliente recusa a solicitação
+		    	prof.solicitacoesParaCliente();
+		        professionalRepository.save(prof);
+		        service.setStatus(ServiceStatus.ABERTO); // Alterar status para RECUSADO
+		        prof.setServiceStatus(ProfessionalServiceStatus.RECUSADO);
+		        service.removerSolicitacaoVinculacao(prof.getId());
+		        serviceRepository.save(service);
+		        professionalRepository.save(prof);
+
+		        try {
+		            emailService.enviarNotificacaoParaProfissional(prof, service);
+			        serviceRepository.save(service);
+		        } catch (MessagingException e) {
+		            throw new RuntimeException("Erro ao enviar e-mail para o profissional", e);
+		        }
+		    }
+
+		}
    
 	private void atualizarMediaAvaliacaoProfissional(Professional profissional) {
         List<com.lgs.entities.Service> servicos = serviceRepository.findByProfessional(profissional);
@@ -445,4 +500,39 @@ public class ServiceService {
 	   public List<com.lgs.entities.Service> listarServicosPorEspecialidade(Long clientId, String specialty) {
 	        return serviceRepository.findByClientIdAndSpecialty(clientId, specialty);
 	    }
+	   
+	   public com.lgs.entities.Service solicitarServicoAoCliente(Long professionalId, Long  serviceId) throws MessagingException {
+		    // Buscar o profissional e o cliente
+		    Professional professional = professionalRepository.findById(professionalId)
+		            .orElseThrow(() -> new RuntimeException("Profissional não encontrado"));
+
+		    com.lgs.entities.Service service = serviceRepository.findById(serviceId)
+		            .orElseThrow(() -> new RuntimeException("Serviço não encontrado"));
+
+		    // Verificar se o profissional está disponível para criar uma solicitação
+		    if (!professional.isAvailable()) {
+		        throw new RuntimeException("Este profissional não está disponível para criar uma solicitação.");
+		    }
+
+		    // Associar o cliente e o profissional ao serviço
+		    service.addIdsSolicitacoesDeVinculacao(professionalId);
+        	service.addTotalProfessionalRequested();
+        	   service.setProfessional(null);
+               if(service.getServiceStatus() == ProfessionalServiceStatus.RECUSADO || service.getServiceStatus() == ProfessionalServiceStatus.ABERTO) {
+               professional.setServiceStatus(ProfessionalServiceStatus.AGUARDANDO); // Define status como AGUARDANDO 
+               }
+		    // Salvar o serviço
+		    serviceRepository.save(service);
+
+		    // Enviar notificação por e-mail para o cliente
+		    try {
+		        emailService.enviarNotificacaoParaCliente2(service.getClient(), service.getName(), professional.getName(), false); // False pois é uma solicitação, não uma aceitação
+		    } catch (MessagingException e) {
+		        throw new RuntimeException("Erro ao enviar e-mail para o cliente", e);
+		    }
+
+		    return service;
+		}
+
+
 }
