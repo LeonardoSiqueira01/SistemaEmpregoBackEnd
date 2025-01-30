@@ -1,17 +1,25 @@
 package com.lgs.controller;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.lgs.dto.ClientDTOProfile;
 import com.lgs.dto.ClientSummaryResponse;
+import com.lgs.dto.ProfessionalDTOProfile;
+import com.lgs.dto.RatingDtoForClient;
+import com.lgs.dto.RatingDtoForProfessional;
 import com.lgs.dto.UserRegistrationRequest;
 import com.lgs.entities.Client;
 import com.lgs.entities.Professional;
@@ -107,7 +115,70 @@ public class UserController {
         }
     }
 
+    @GetMapping("/users/{email}")
+    public ResponseEntity<?> getUserProfile(@PathVariable("email") String email) {
+        User user = userService.getUserByEmail(email); // Chama o serviço que recupera o usuário com base no email
 
-    
+        // Verifica se o usuário é um cliente
+        if (user instanceof Client) {
+            Client client = (Client) user;
+
+            List<RatingDtoForClient> ratings = client.getRatings().stream()
+                    .filter(rating -> rating.getCommentaryForClient() != null && rating.getRatedClient() != null)  // Filtro para garantir que o comentário e a avaliação não sejam nulos
+                    .map(rating -> new RatingDtoForClient(
+                        rating.getProfessional().getName(),  // Nome do profissional que fez a avaliação
+                        rating.getCommentaryForClient(),
+                        rating.getRatedClient()))  // Avaliação do cliente
+                    .collect(Collectors.toList());
+
+            // Criação do ClientDTOProfile
+            ClientDTOProfile clientDTOProfile = new ClientDTOProfile(
+                client.getId(),
+                client.getName(),
+                client.getEmail(),
+                client.getType(),
+                client.getTotalServicesRequested(),
+                client.getTotalServicesCompleted(),
+                client.getAverageRating(),
+                ratings
+            );
+
+            return ResponseEntity.ok(clientDTOProfile);
+        }
+
+        // Verifica se o usuário é um profissional
+        if (user instanceof Professional) {
+            Professional professional = (Professional) user;
+
+            // Converte a lista de Ratings em RatingDtoForProfessional
+            List<RatingDtoForProfessional> ratings = professional.getRatings().stream()
+                .map(rating -> new RatingDtoForProfessional(
+                    rating.getClient().getName(), // Nome do cliente que fez a avaliação
+                    rating.getComment(),
+                    rating.getRatedProfessional())) // Avaliação do profissional
+                .collect(Collectors.toList());
+
+            // Criação do ProfessionalDTOProfile
+            ProfessionalDTOProfile professionalDTOProfile = new ProfessionalDTOProfile(
+                professional.getId(),
+                professional.getName(),
+                professional.getEmail(),
+                professional.getType(),
+                professional.getTotalServicesRequested(),
+                professional.getTotalServicesCompleted(),
+                professional.getAverageRating(),
+                professional.getSpecialties(),
+                professional.getLocation(),
+                ratings
+            );
+
+            return ResponseEntity.ok(professionalDTOProfile);
+        }
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Tipo de usuário desconhecido");
+    }
+
+
+
     
     }

@@ -52,6 +52,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/services/{serviceId}/profissionais").hasAuthority("CLIENT")
                         .requestMatchers(HttpMethod.POST, "api/services/{ProfessionalEmail}/services/{serviceId}/reject").hasAuthority("CLIENT")
                         .requestMatchers(HttpMethod.POST, "api/services/{ProfessionalEmail}/services/{serviceId}/accept").hasAuthority("CLIENT")
+                        .requestMatchers(HttpMethod.GET, "api/users/{email}").permitAll()
+                        .requestMatchers(HttpMethod.GET, "api/users2/{email}").permitAll()
 
                         .anyRequest().authenticated()
                 )

@@ -52,6 +52,8 @@ public class Service {
 
     private String professionalName;
     private String professionalEmail;
+    private String ClientName;
+    private String ClientEmail;
     private Integer totalProfessionalRequested = 0; 
 
     @Enumerated(EnumType.STRING)
@@ -243,4 +245,22 @@ public class Service {
 	        }
 	    }
 
+		public String getClientName() {
+			return ClientName;
+		}
+
+		public void setClientName(String clientName) {
+			ClientName = clientName;
+		}
+
+		public String getClientEmail() {
+			return ClientEmail;
+		}
+
+		public void setClientEmail(String clientEmail) {
+			ClientEmail = clientEmail;
+		}
+
+	    
+	    
 }

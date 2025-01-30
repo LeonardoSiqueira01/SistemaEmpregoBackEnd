@@ -124,6 +124,8 @@ public class ServiceService {
         
         // Associe o cliente ao serviço
         service.setClient(cliente);
+        service.setClientEmail(cliente.getEmail());
+        service.setClientName(cliente.getName());
         service.setProfessional(null); // Profissional ainda não vinculado
         service.setStatus(ServiceStatus.ABERTO); // Status inicial é ABERTO
         service.setRatings(null); // Definir ratings como null, se necessário
@@ -534,5 +536,5 @@ public class ServiceService {
 		    return service;
 		}
 
-
+	  
 }

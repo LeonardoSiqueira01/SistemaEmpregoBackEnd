@@ -16,19 +16,21 @@ import com.lgs.entities.Service.ServiceStatus;
 @Repository 
 public interface ServiceRepository extends JpaRepository<Service, Long> {
 
-    List<Service> findByClientEmail(String email);
-    
-    List<Service> findBySpecialtyAndClientEmail(String specialty, String email);
-    
+	@Query("SELECT s FROM Service s WHERE s.client.email = :email")
+    List<Service> findByClientEmail(@Param("email") String email);
+	
+	@Query("SELECT s FROM Service s WHERE s.specialty = :specialty AND s.client.email = :email")
+    List<Service> findBySpecialtyAndClientEmail(@Param("specialty") String specialty, @Param("email") String email);    
     List<Service> findByStatus(Service.ServiceStatus status);
     
     List<Service> findByClientId(Long clientId);
-    int countByClientEmail(String email); // Contar serviços pelo email do cliente
+    @Query("SELECT COUNT(s) FROM Service s WHERE s.client.email = :email")
+    int countByClientEmail(@Param("email") String email);
 
 
 
-    int countByClientEmailAndStatus(String email, Service.ServiceStatus status); // Contar serviços por email e status
-
+    @Query("SELECT COUNT(s) FROM Service s WHERE s.client.email = :email AND s.status = :status")
+    int countByClientEmailAndStatus(@Param("email") String email, @Param("status") ServiceStatus status);
     @Query("SELECT COUNT(s) FROM Service s WHERE s.client.email = :email AND s.status = :status")
     long countServicesByClientEmailAndStatus(@Param("email") String email, @Param("status") Service.ServiceStatus status);
 
