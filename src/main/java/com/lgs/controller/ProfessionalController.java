@@ -1,6 +1,8 @@
 package com.lgs.controller;
 
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -11,10 +13,13 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.lgs.dto.ProfessionalDtoPerfil;
 import com.lgs.entities.Professional;
 import com.lgs.entities.Service;
 import com.lgs.repositories.ProfessionalRepository;
@@ -127,5 +132,151 @@ public class ProfessionalController {
     }
     
     
+    @PreAuthorize("hasRole('PROFESSIONAL')")
+    @PutMapping("/{email}/edit")
+    public ResponseEntity<?> editarPerfil(@PathVariable("email") String email,
+                                          @RequestBody ProfessionalDtoPerfil dadosAtualizados,
+                                          @RequestHeader("Authorization") String authorizationHeader) {
+        try {
+            // Verificar se o token foi passado no header
+            if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token não fornecido ou inválido.");
+            }
+
+            // Extrair o token
+            String token = authorizationHeader.substring(7); // Remove o prefixo "Bearer "
+
+            // Validar o token e extrair o e-mail
+            String emailToken = tokenService.extractEmail(token);
+            if (emailToken == null || !emailToken.equals(email)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token inválido ou não corresponde ao e-mail.");
+            }
+
+            // Busca o profissional pelo e-mail
+            Optional<Professional> professionalOptional = professionalRepository.findByEmail(email);
+            if (professionalOptional.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Profissional não encontrado.");
+            }
+
+            // Atualiza os dados do profissional
+            Professional profissional = professionalOptional.get();
+            
+            // Atualizar nome, email e localização se não forem nulos
+            if (dadosAtualizados.getName() != null) {
+                profissional.setName(dadosAtualizados.getName());  
+            }
+            if (dadosAtualizados.getEmail() != null) {
+                profissional.setEmail(dadosAtualizados.getEmail());
+            }
+            if (dadosAtualizados.getLocation() != null) {
+                profissional.setLocation(dadosAtualizados.getLocation());
+            }
+
+            // Processa especialidades a serem removidas
+            if (dadosAtualizados.getSpecialtiesToRemove() != null && !dadosAtualizados.getSpecialtiesToRemove().isEmpty()) {
+                String[] specialtiesToRemove = dadosAtualizados.getSpecialtiesToRemove().split(",");  
+                for (String specialty : specialtiesToRemove) {
+                    profissional.removeSpecialty(specialty.trim());  // Remove espaços extras
+                }
+            }
+
+            // Processa novas especialidades
+            if (dadosAtualizados.getSpecialties() != null && !dadosAtualizados.getSpecialties().isEmpty()) {
+                String[] specialties = dadosAtualizados.getSpecialties().split(",");
+                for (String specialty : specialties) {
+                    profissional.addSpecialty(specialty.trim());  // Remove espaços extras
+                }
+            }
+
+            // Salva as alterações no banco de dados
+            professionalRepository.save(profissional);
+
+            return ResponseEntity.ok("Perfil atualizado com sucesso!");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao atualizar o perfil: " + e.getMessage());
+        }
+    }
+
+
     
+    
+    
+    @PreAuthorize("hasRole('PROFESSIONAL')")
+    @GetMapping("/{email}/specialties")
+    public ResponseEntity<?> listarEspecialidades(@PathVariable("email") String email, 
+                                                 @RequestHeader("Authorization") String authorizationHeader) {
+        try {
+            // Verificar se o token foi passado no header
+            if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token não fornecido ou inválido.");
+            }
+
+            // Extrair o token
+            String token = authorizationHeader.substring(7); // Remove o prefixo "Bearer "
+            
+            // Validar o token e extrair o e-mail
+            String emailToken = tokenService.extractEmail(token);
+            if (emailToken == null || !emailToken.equals(email)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token inválido ou não corresponde ao e-mail.");
+            }
+
+            // Busca o profissional pelo e-mail
+            Optional<Professional> professionalOptional = professionalRepository.findByEmail(email);
+            if (professionalOptional.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Profissional não encontrado.");
+            }
+
+            // Retorna as especialidades do profissional
+            Professional professional = professionalOptional.get();
+            return ResponseEntity.ok(professional.getSpecialties());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao listar especialidades: " + e.getMessage());
+        }
+    }
+    @PreAuthorize("hasRole('PROFESSIONAL')")
+    @GetMapping("/{email}/profile")
+    public ResponseEntity<?> obterPerfil(@PathVariable("email") String email,
+                                         @RequestHeader("Authorization") String authorizationHeader) {
+        try {
+            // Verificar se o token foi passado no header
+            if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token não fornecido ou inválido.");
+            }
+
+            // Extrair o token
+            String token = authorizationHeader.substring(7); // Remove o prefixo "Bearer "
+
+            // Validar o token e extrair o e-mail
+            String emailToken = tokenService.extractEmail(token);
+            if (emailToken == null || !emailToken.equals(email)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token inválido ou não corresponde ao e-mail.");
+            }
+
+            // Busca o profissional pelo e-mail
+            Optional<Professional> professionalOptional = professionalRepository.findByEmail(email);
+            if (professionalOptional.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Profissional não encontrado.");
+            }
+
+            // Recupera os dados do profissional
+            Professional professional = professionalOptional.get();
+
+            // Cria um DTO para retornar apenas as informações necessárias
+            ProfessionalDtoPerfil perfilDto = new ProfessionalDtoPerfil();
+            perfilDto.setName(professional.getName());
+            perfilDto.setEmail(professional.getEmail());
+            perfilDto.setLocation(professional.getLocation());
+            perfilDto.setSpecialties(professional.getSpecialties());
+
+            // Retorna os dados do perfil
+            return ResponseEntity.ok(perfilDto);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao obter perfil: " + e.getMessage());
+        }
+    }
+
 }

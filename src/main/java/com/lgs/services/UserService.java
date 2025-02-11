@@ -62,16 +62,14 @@ public class UserService {
             professional.setName(user.getName());
             professional.setVerificationCode(verificationCode);
             professional.setType(user.getType());
-            professional.setLocation(location);  
+            professional.setLocation(location);
+
+            // Garantir que as especialidades sejam formatadas corretamente
             if (specialties != null && !specialties.trim().isEmpty()) {
-                String formattedSpecialties = String.join(", ", specialties.split(","));
-                professional.setSpecialties(formattedSpecialties.trim());
-                System.out.println("Especialidades formatadas: " + formattedSpecialties);
+                professional.setSpecialties(specialties.trim());  // Sem necessidade de "split"
             } else {
-                professional.setSpecialties(null);
-                System.out.println("Especialidades definidas como null.");
-            }
-            
+            	throw new Error("Especialidades não podem ficar vazías!");            }
+
             userRepository.save(professional);
             emailService.sendActivationEmail(user.getEmail(), verificationCode);
             return professional;

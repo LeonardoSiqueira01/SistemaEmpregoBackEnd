@@ -54,7 +54,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "api/services/{ProfessionalEmail}/services/{serviceId}/accept").hasAuthority("CLIENT")
                         .requestMatchers(HttpMethod.GET, "api/users/{email}").permitAll()
                         .requestMatchers(HttpMethod.GET, "api/users2/{email}").permitAll()
+                        .requestMatchers(HttpMethod.GET, "api/professionals/{email}/specialties").hasAuthority("PROFESSIONAL")
+                        .requestMatchers(HttpMethod.PUT, "/api/professionals/{email}/edit").hasAuthority("PROFESSIONAL")
+                        .requestMatchers(HttpMethod.GET, "api/professionals/{email}/profile").hasAuthority("PROFESSIONAL")
 
+                       
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class);
