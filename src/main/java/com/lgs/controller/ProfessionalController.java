@@ -172,6 +172,12 @@ public class ProfessionalController {
                 profissional.setLocation(dadosAtualizados.getLocation());
             }
 
+            
+            if ((dadosAtualizados.getSpecialtiesToRemove() == null || dadosAtualizados.getSpecialtiesToRemove().isEmpty()) &&
+                    (dadosAtualizados.getSpecialties() == null || dadosAtualizados.getSpecialties().isEmpty())) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Pelo menos uma especialidade deve ser fornecida.");
+                }
+            
             // Processa especialidades a serem removidas
             if (dadosAtualizados.getSpecialtiesToRemove() != null && !dadosAtualizados.getSpecialtiesToRemove().isEmpty()) {
                 String[] specialtiesToRemove = dadosAtualizados.getSpecialtiesToRemove().split(",");  
