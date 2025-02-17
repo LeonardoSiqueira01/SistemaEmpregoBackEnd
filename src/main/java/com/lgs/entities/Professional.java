@@ -162,7 +162,7 @@ public class Professional extends User {
         } else {
             // Adiciona a nova especialidade com vírgula
             if (!this.specialties.contains(specialty)) {
-                this.specialties += ", " + specialty;
+                this.specialties += "; " + specialty;
             }
         }
     }
@@ -170,13 +170,13 @@ public class Professional extends User {
     
     public void removeSpecialty(String specialty) {
         if (this.specialties != null && !this.specialties.isEmpty()) {
-            String[] specialtiesArray = this.specialties.split(", ");
+            String[] specialtiesArray = this.specialties.split("; ");
             StringBuilder newSpecialties = new StringBuilder();
 
             for (String s : specialtiesArray) {
                 if (!s.equalsIgnoreCase(specialty)) {
                     if (newSpecialties.length() > 0) {
-                        newSpecialties.append(", ");
+                        newSpecialties.append("; ");
                     }
                     newSpecialties.append(s);
                 }

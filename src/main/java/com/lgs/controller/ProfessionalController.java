@@ -22,8 +22,10 @@ import org.springframework.web.bind.annotation.RestController;
 import com.lgs.dto.ProfessionalDtoPerfil;
 import com.lgs.entities.Professional;
 import com.lgs.entities.Service;
+import com.lgs.entities.User;
 import com.lgs.repositories.ProfessionalRepository;
 import com.lgs.repositories.ServiceRepository;
+import com.lgs.repositories.UserRepository;
 import com.lgs.security.TokenService;
 import com.lgs.services.ServiceService;
 
@@ -35,6 +37,9 @@ public class ProfessionalController {
 
 	@Autowired
 	private ProfessionalRepository professionalRepository;
+	
+	@Autowired
+	private UserRepository userRepository;
 	
 	@Autowired
 	private TokenService tokenService;
@@ -131,7 +136,6 @@ public class ProfessionalController {
         return serviceRepository.findById(serviceId);
     }
     
-    
     @PreAuthorize("hasRole('PROFESSIONAL')")
     @PutMapping("/{email}/edit")
     public ResponseEntity<?> editarPerfil(@PathVariable("email") String email,
@@ -145,9 +149,8 @@ public class ProfessionalController {
 
             // Extrair o token
             String token = authorizationHeader.substring(7); // Remove o prefixo "Bearer "
-
-            // Validar o token e extrair o e-mail
             String emailToken = tokenService.extractEmail(token);
+
             if (emailToken == null || !emailToken.equals(email)) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token inválido ou não corresponde ao e-mail.");
             }
@@ -157,14 +160,25 @@ public class ProfessionalController {
             if (professionalOptional.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Profissional não encontrado.");
             }
-
+            // Verificar se o novo e-mail já está registrado
+            if (dadosAtualizados.getEmail() != null && !dadosAtualizados.getEmail().equals(email)) {
+                Optional<User> existingEmail = userRepository.findByEmail(dadosAtualizados.getEmail());
+                if (existingEmail.isPresent()) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Este e-mail já está registrado em outra conta.");
+                }
+            }
             // Atualiza os dados do profissional
             Professional profissional = professionalOptional.get();
-            
+
             // Atualizar nome, email e localização se não forem nulos
             if (dadosAtualizados.getName() != null) {
-                profissional.setName(dadosAtualizados.getName());  
+                profissional.setName(dadosAtualizados.getName());
             }
+            
+            if (dadosAtualizados.getName() != null && !dadosAtualizados.getName().equals(profissional.getName())) {
+                profissional.setName(dadosAtualizados.getName());
+            }
+
             if (dadosAtualizados.getEmail() != null) {
                 profissional.setEmail(dadosAtualizados.getEmail());
             }
@@ -172,26 +186,40 @@ public class ProfessionalController {
                 profissional.setLocation(dadosAtualizados.getLocation());
             }
 
-            
-            if ((dadosAtualizados.getSpecialtiesToRemove() == null || dadosAtualizados.getSpecialtiesToRemove().isEmpty()) &&
-                    (dadosAtualizados.getSpecialties() == null || dadosAtualizados.getSpecialties().isEmpty())) {
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Pelo menos uma especialidade deve ser fornecida.");
-                }
-            
-            // Processa especialidades a serem removidas
+            // Processar especialidades a serem removidas e adicionadas, se não estiverem vazias
+            boolean specialtiesProcessed = false;
+
+            // Processa especialidades a serem removidas, se houver
             if (dadosAtualizados.getSpecialtiesToRemove() != null && !dadosAtualizados.getSpecialtiesToRemove().isEmpty()) {
-                String[] specialtiesToRemove = dadosAtualizados.getSpecialtiesToRemove().split(",");  
+                String[] specialtiesToRemove = dadosAtualizados.getSpecialtiesToRemove().split(";");
                 for (String specialty : specialtiesToRemove) {
-                    profissional.removeSpecialty(specialty.trim());  // Remove espaços extras
+                    profissional.removeSpecialty(specialty.trim()); // Remove espaços extras
                 }
+                specialtiesProcessed = true; // Indicando que pelo menos uma especialidade foi processada
             }
 
-            // Processa novas especialidades
+            // Processa especialidades a serem adicionadas, se houver
             if (dadosAtualizados.getSpecialties() != null && !dadosAtualizados.getSpecialties().isEmpty()) {
-                String[] specialties = dadosAtualizados.getSpecialties().split(",");
+                String[] specialties = dadosAtualizados.getSpecialties().split(";");
                 for (String specialty : specialties) {
-                    profissional.addSpecialty(specialty.trim());  // Remove espaços extras
+                    String trimmedSpecialty = specialty.trim();
+
+                    // Verificar se a especialidade já existe
+                    if (profissional.getSpecialties().contains(trimmedSpecialty)) {
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Você já adicionou a especialidade: " + trimmedSpecialty);
+                    }
+
+                    // Adiciona a especialidade se não existir
+                    profissional.addSpecialty(trimmedSpecialty);
                 }
+                specialtiesProcessed = true; // Indicando que pelo menos uma especialidade foi processada
+            }
+
+            // Se ambos os campos estiverem vazios, nada é feito (não processa nada)
+            if (!specialtiesProcessed) {
+                // Ambos os campos (specialties e specialtiesToRemove) estão vazios, então nada será processado
+                professionalRepository.save(profissional);
+                return ResponseEntity.ok("Perfil atualizado com sucesso, sem alterações nas especialidades.");
             }
 
             // Salva as alterações no banco de dados
@@ -203,7 +231,6 @@ public class ProfessionalController {
                     .body("Erro ao atualizar o perfil: " + e.getMessage());
         }
     }
-
 
     
     

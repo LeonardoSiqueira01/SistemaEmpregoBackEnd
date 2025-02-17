@@ -3,21 +3,20 @@ package com.lgs.dto;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.List;
+
 public class ProfessionalDtoPerfil {
 
     private String name;
     private String email;
     private String location;
-    private String specialtiesToRemove; // Novo campo para remover especialidades
+    private String specialtiesToRemove; // Para remover especialidades
     private String specialties; // Para adicionar/atualizar especialidades
 
-    
-    
-    
     public ProfessionalDtoPerfil() {
-	}
+    }
 
-	@JsonCreator
+    @JsonCreator
     public ProfessionalDtoPerfil(@JsonProperty("name") String name,
                                  @JsonProperty("email") String email,
                                  @JsonProperty("location") String location,
