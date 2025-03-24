@@ -292,41 +292,38 @@ public class ServiceController {
     }
 
 
-
     @GetMapping
     public ResponseEntity<?> listarTodosServicos(
-            @RequestParam(value = "cidades", required = false) List<String> cidades,
+            @RequestParam(value = "cidade", required = false) List<String> cidade,
             @RequestParam(value = "especialidade", required = false) String especialidade) {
         try {
             // Lista todos os serviços inicialmente
             List<Service> servicos = serviceService.listarTodosServicos();
+
             // Filtrar apenas serviços com status ABERTO
             servicos = servicos.stream()
                     .filter(service -> service.getStatus() == Service.ServiceStatus.ABERTO)
                     .collect(Collectors.toList());
 
-            // Filtrando por cidade
-            if (cidades != null && !cidades.isEmpty()) {
-                List<Service> servicosCidade = servicos.stream()
+            // Filtrando por cidade (corrigido para capturar corretamente a cidade)
+            if (cidade != null && !cidade.isEmpty()) {
+                servicos = servicos.stream()
                         .filter(service -> {
-                            String cityFromAddress = getCityFromAddress(service.getLocation());
-                            return cidades.stream().anyMatch(city -> city.equalsIgnoreCase(cityFromAddress));
+                            String cityFromAddress = getCityFromAddress(service.getLocation()).toLowerCase().trim();
+                            System.out.println("Cidade extraída do serviço: " + cityFromAddress);
+                            return cidade.stream().anyMatch(city -> city.toLowerCase().trim().equals(cityFromAddress));
                         })
                         .collect(Collectors.toList());
+            }
 
-                // Se não encontrar serviços na cidade, buscar serviços no estado
-                if (servicosCidade.isEmpty()) {
-                    servicos = servicos.stream()
-                            .filter(service -> {
-                                String stateFromAddress = getStateFromAddress(service.getLocation());
-                                System.out.println("Estado do serviço: " + stateFromAddress);  // Log para debug
-                                return cidades.stream().anyMatch(city -> city.equalsIgnoreCase(stateFromAddress));
-                            })
-                            .collect(Collectors.toList());
-                } else {
-                    // Se houver serviços na cidade, use a lista filtrada
-                    servicos = servicosCidade;
-                }
+            // Se não encontrar serviços na cidade, buscar serviços no estado
+            if (cidade != null && !cidade.isEmpty() && servicos.isEmpty()) {
+                servicos = serviceService.listarTodosServicos().stream()
+                        .filter(service -> {
+                            String stateFromAddress = getStateFromAddress(service.getLocation()).toLowerCase().trim();
+                            return cidade.stream().anyMatch(city -> city.toLowerCase().trim().equals(stateFromAddress));
+                        })
+                        .collect(Collectors.toList());
             }
 
             // Filtrar por especialidade se o parâmetro estiver presente
@@ -343,25 +340,35 @@ public class ServiceController {
                     .body("Erro ao listar serviços: " + e.getMessage());
         }
     }
- // Método para extrair a cidade do endereço
+
+    
+    
     private String getCityFromAddress(String location) {
         if (location != null) {
-            // Dividir o endereço pela vírgula
             String[] parts = location.split(",");
-            if (parts.length >= 3) {
-                // O terceiro campo após a vírgula é a cidade (parte do meio)
-                String city = parts[2].trim();
 
-                // Remover o estado, caso o nome da cidade contenha " - "
-                if (city.contains("-")) {
-                    city = city.split("-")[0].trim(); // Extrai a cidade sem o estado
+            // Verifica se há pelo menos 2 vírgulas no endereço
+            if (parts.length >= 2) {
+                // A cidade sempre estará na segunda posição de trás para frente
+                String possibleCity = parts[parts.length - 2].trim();
+
+                // Verifica se a última parte contém um CEP válido (XXXXX-XXX)
+                if (parts[parts.length - 1].trim().matches(".*\\d{5}-\\d{3}$")) {
+                    // Se houver um estado junto (ex: "Cidade - Estado"), remover o estado
+                    if (possibleCity.contains("-")) {
+                        possibleCity = possibleCity.split("-")[0].trim();
+                    }
+
+                    return possibleCity;
                 }
-
-                return city.isEmpty() ? "" : city; // Retorna vazio se a cidade não for encontrada
             }
         }
-        return ""; // Retorna vazio caso não encontre a cidade
+        return "";
     }
+
+
+
+
 
 
     // Método para extrair o estado do endereço

@@ -57,7 +57,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "api/professionals/{email}/specialties").hasAuthority("PROFESSIONAL")
                         .requestMatchers(HttpMethod.PUT, "/api/professionals/{email}/edit").hasAuthority("PROFESSIONAL")
                         .requestMatchers(HttpMethod.GET, "api/professionals/{email}/profile").hasAuthority("PROFESSIONAL")
-
+                        .requestMatchers(HttpMethod.GET,"/api/cities").permitAll()
                        
                         .anyRequest().authenticated()
                 )
