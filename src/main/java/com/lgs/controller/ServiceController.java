@@ -290,11 +290,9 @@ public class ServiceController {
                 return Integer.MAX_VALUE; // Se houver outro status desconhecido
         }
     }
-
-
     @GetMapping
     public ResponseEntity<?> listarTodosServicos(
-            @RequestParam(value = "cidade", required = false) List<String> cidade,
+            @RequestParam(value = "cidadeEstado", required = false) String cidadeEstado,
             @RequestParam(value = "especialidade", required = false) String especialidade) {
         try {
             // Lista todos os serviços inicialmente
@@ -305,30 +303,22 @@ public class ServiceController {
                     .filter(service -> service.getStatus() == Service.ServiceStatus.ABERTO)
                     .collect(Collectors.toList());
 
-            // Filtrando por cidade (corrigido para capturar corretamente a cidade)
-            if (cidade != null && !cidade.isEmpty()) {
+            // Filtrar por Cidade - Estado
+            if (cidadeEstado != null && !cidadeEstado.isBlank()) {
+                System.out.println("Filtrando por cidade e estado: " + cidadeEstado);
+
+                // Remover o estado duplicado se presente
+                String cidadeEstadoCorrigido = corrigirCidadeEstado(cidadeEstado);
+
                 servicos = servicos.stream()
-                        .filter(service -> {
-                            String cityFromAddress = getCityFromAddress(service.getLocation()).toLowerCase().trim();
-                            System.out.println("Cidade extraída do serviço: " + cityFromAddress);
-                            return cidade.stream().anyMatch(city -> city.toLowerCase().trim().equals(cityFromAddress));
-                        })
+                        .filter(service -> cidadeEstadoCorrigido.equalsIgnoreCase(getCityStateFromAddress(service.getLocation())))
                         .collect(Collectors.toList());
             }
 
-            // Se não encontrar serviços na cidade, buscar serviços no estado
-            if (cidade != null && !cidade.isEmpty() && servicos.isEmpty()) {
-                servicos = serviceService.listarTodosServicos().stream()
-                        .filter(service -> {
-                            String stateFromAddress = getStateFromAddress(service.getLocation()).toLowerCase().trim();
-                            return cidade.stream().anyMatch(city -> city.toLowerCase().trim().equals(stateFromAddress));
-                        })
-                        .collect(Collectors.toList());
-            }
+            System.out.println("Valor recebido em cidadeEstado: " + cidadeEstado);
 
-            // Filtrar por especialidade se o parâmetro estiver presente
+            // Filtrar por especialidade
             if (especialidade != null && !especialidade.isBlank()) {
-                System.out.println("Filtrando por especialidade: " + especialidade);
                 servicos = servicos.stream()
                         .filter(service -> especialidade.equalsIgnoreCase(service.getSpecialty()))
                         .collect(Collectors.toList());
@@ -341,26 +331,34 @@ public class ServiceController {
         }
     }
 
-    
-    
-    private String getCityFromAddress(String location) {
+    // Método para corrigir a duplicação do estado na string de cidadeEstado
+    private String corrigirCidadeEstado(String cidadeEstado) {
+        // Verifica se a cidadeEstado contém o estado repetido e remove
+        String[] partes = cidadeEstado.split("-");
+        if (partes.length == 3 && partes[1].trim().equals(partes[2].trim())) {
+            // Remove a parte repetida (o estado duplicado)
+            return partes[0].trim() + " - " + partes[1].trim();
+        }
+        return cidadeEstado.trim();
+    }
+
+    private String getCityStateFromAddress(String location) {
         if (location != null) {
             String[] parts = location.split(",");
 
-            // Verifica se há pelo menos 2 vírgulas no endereço
             if (parts.length >= 2) {
-                // A cidade sempre estará na segunda posição de trás para frente
-                String possibleCity = parts[parts.length - 2].trim();
+                // Obtém a última e penúltima parte como Estado e Cidade
+                String estado = parts[parts.length - 1].trim();
+                String cidade = parts[parts.length - 2].trim();
 
-                // Verifica se a última parte contém um CEP válido (XXXXX-XXX)
-                if (parts[parts.length - 1].trim().matches(".*\\d{5}-\\d{3}$")) {
-                    // Se houver um estado junto (ex: "Cidade - Estado"), remover o estado
-                    if (possibleCity.contains("-")) {
-                        possibleCity = possibleCity.split("-")[0].trim();
-                    }
-
-                    return possibleCity;
+                // Se cidade contém hífen, pode ser "Cidade - Estado", então separa
+                if (cidade.contains("-")) {
+                    String[] cidadeEstado = cidade.split("-");
+                    cidade = cidadeEstado[0].trim();
+                    estado = cidadeEstado[1].trim();
                 }
+
+                return cidade + " - " + estado;
             }
         }
         return "";
@@ -369,29 +367,6 @@ public class ServiceController {
 
 
 
-
-
-    // Método para extrair o estado do endereço
-    private String getStateFromAddress(String location) {
-        if (location != null) {
-            // Dividir o endereço pela vírgula
-            String[] parts = location.split(",");
-            if (parts.length >= 3) {
-                String state = parts[2].trim();
-
-                // Ajustar caso o estado tenha cidade combinada (ex: "Santos - SP")
-                if (state.contains("-")) {
-                    String[] stateParts = state.split("-");
-                    if (stateParts.length > 1) {
-                        state = stateParts[1].trim(); // Extrai apenas a parte do estado
-                    }
-                }
-
-                return state.isEmpty() ? "" : state; // Retorna vazio se o estado não for encontrado
-            }
-        }
-        return ""; // Retorna vazio caso não encontre o estado
-    }
     
     @PostMapping("/{serviceId}/professional/{professionalEmail}/rate-client")
     public ResponseEntity<String> avaliarCliente(
