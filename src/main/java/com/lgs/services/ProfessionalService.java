@@ -32,4 +32,21 @@ public class ProfessionalService {
                 ))
                 .collect(Collectors.toList());
     }
+    
+    public List<ProfessionalDTO> getProfessionalsBySpecialty(String specialties) {
+        // Filtra os profissionais com base na especialidade
+        return professionalRepository.findAll().stream()
+                .filter(professional -> professional.getSpecialties().contains(specialties))
+                .map(professional -> new ProfessionalDTO(
+                        professional.getId(),
+                        professional.getName(),
+                        professional.getEmail(),
+                        professional.getTotalServicesCompleted(),
+                        professional.getAverageRating(),
+                        professional.isAvailable(),
+                        professional.getSpecialties(),
+                        professional.getLocation()
+                ))
+                .collect(Collectors.toList());
+    }
 }

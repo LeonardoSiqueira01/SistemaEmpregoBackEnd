@@ -22,6 +22,8 @@ public class Service {
     private Long id;
 
     private String name;
+    
+    @Column(length = 1000)
     private String description;
     
     @JsonFormat(pattern = "yyyy-MM-dd")
