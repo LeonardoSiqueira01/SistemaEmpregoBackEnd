@@ -3,6 +3,7 @@ package com.lgs.controller;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.lgs.dto.ProfessionalDtoPerfil;
@@ -79,48 +81,57 @@ public class ProfessionalController {
         }
     }
     
-    
-    
     @PreAuthorize("hasRole('PROFESSIONAL')")
     @GetMapping("/me")
-    public ResponseEntity<?> listarServicosSolicitadosDoProfissional(@RequestHeader("Authorization") String authorizationHeader) {
+    public ResponseEntity<?> listarServicosSolicitadosDoProfissional(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @RequestParam(value = "cidadeEstado", required = false) String cidadeEstado,
+            @RequestParam(value = "especialidade", required = false) String especialidade) {
         try {
-            // Verificar se o token foi passado no header
             if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token não fornecido ou inválido.");
             }
 
-            // Extrair o token
-            String token = authorizationHeader.substring(7); // Remove o prefixo "Bearer "
-            
-            // Validar o token e extrair o e-mail
+            String token = authorizationHeader.substring(7);
             String email = tokenService.extractEmail(token);
+
             if (email == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token inválido.");
             }
 
-            // Busca o profissional pelo e-mail
             Optional<Professional> professionalOptional = professionalRepository.findByEmail(email);
             if (professionalOptional.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Profissional não encontrado.");
             }
 
             Professional professional = professionalOptional.get();
-
-            // Verificar se a lista de solicitações é null e inicializar se necessário
             Set<Long> solicitacoesVinculacaoServico = professional.getSolicitacoesVinculacaoServico();
+
             if (solicitacoesVinculacaoServico == null) {
                 solicitacoesVinculacaoServico = new HashSet<>();
             }
 
-            // Buscar os serviços solicitados para vinculação
-            Set<Service> servicosSolicitados = new HashSet<>();
-            for (Long serviceId : solicitacoesVinculacaoServico) {
-                Optional<Service> serviceOptional = serviceRepository.findById(serviceId);
-                serviceOptional.ifPresent(servicosSolicitados::add);
+            Set<Service> servicosSolicitados = solicitacoesVinculacaoServico.stream()
+                    .map(serviceRepository::findById)
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .collect(Collectors.toSet());
+
+            // Filtragem opcional por cidade e especialidade
+            if (cidadeEstado != null && !cidadeEstado.isBlank()) {
+                String cidadeEstadoCorrigido = corrigirCidadeEstado(cidadeEstado);
+
+                servicosSolicitados = servicosSolicitados.stream()
+                        .filter(service -> cidadeEstadoCorrigido.equalsIgnoreCase(getCityStateFromAddress(service.getLocation())))
+                        .collect(Collectors.toSet());
             }
 
-            // Retorna a lista de serviços solicitados
+            if (especialidade != null && !especialidade.isBlank()) {
+                servicosSolicitados = servicosSolicitados.stream()
+                        .filter(service -> especialidade.equalsIgnoreCase(service.getSpecialty()))
+                        .collect(Collectors.toSet());
+            }
+
             return ResponseEntity.ok(servicosSolicitados);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -128,6 +139,37 @@ public class ProfessionalController {
         }
     }
 
+    // Método para corrigir a duplicação do estado na string de cidadeEstado
+    private String corrigirCidadeEstado(String cidadeEstado) {
+        if (cidadeEstado != null) {
+            String[] partes = cidadeEstado.split("-");
+            if (partes.length == 3 && partes[1].trim().equals(partes[2].trim())) {
+                return partes[0].trim() + " - " + partes[1].trim();
+            }
+        }
+        return cidadeEstado != null ? cidadeEstado.trim() : "";
+    }
+
+    // Método para extrair cidade e estado a partir do endereço
+    private String getCityStateFromAddress(String location) {
+        if (location != null) {
+            String[] parts = location.split(",");
+
+            if (parts.length >= 2) {
+                String estado = parts[parts.length - 1].trim();
+                String cidade = parts[parts.length - 2].trim();
+
+                if (cidade.contains("-")) {
+                    String[] cidadeEstado = cidade.split("-");
+                    cidade = cidadeEstado[0].trim();
+                    estado = cidadeEstado[1].trim();
+                }
+
+                return cidade + " - " + estado;
+            }
+        }
+        return "";
+    }
 
     
     public Optional<com.lgs.entities.Service> listarServicosPorId(Long serviceId) {

@@ -7,6 +7,8 @@ public class ServiceDTO {
     private String location;
     private String specialty;
 
+    
+
     public ServiceDTO(Long id, String name, String description, String location, String specialty) {
         this.id = id;
         this.name = name;
