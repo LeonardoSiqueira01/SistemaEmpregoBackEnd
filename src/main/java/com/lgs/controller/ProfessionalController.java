@@ -86,6 +86,7 @@ public class ProfessionalController {
     public ResponseEntity<?> listarServicosSolicitadosDoProfissional(
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
             @RequestParam(value = "cidadeEstado", required = false) String cidadeEstado,
+            @RequestParam(value = "status", required = false) String status,
             @RequestParam(value = "especialidade", required = false) String especialidade) {
         try {
             if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
@@ -131,6 +132,12 @@ public class ProfessionalController {
                         .filter(service -> especialidade.equalsIgnoreCase(service.getSpecialty()))
                         .collect(Collectors.toSet());
             }
+            if (status != null && !status.isBlank()) {
+                servicosSolicitados = servicosSolicitados.stream()
+                        .filter(service -> service.getStatus() != null && status.equalsIgnoreCase(service.getStatus().name()))
+                        .collect(Collectors.toSet());
+            }
+
 
             return ResponseEntity.ok(servicosSolicitados);
         } catch (Exception e) {
