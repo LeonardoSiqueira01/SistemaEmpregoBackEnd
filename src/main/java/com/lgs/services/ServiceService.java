@@ -515,7 +515,7 @@ public class ServiceService {
 		    if (!professional.isAvailable()) {
 		        throw new RuntimeException("Este profissional não está disponível para criar uma solicitação.");
 		    }
-
+		    	professional.addIdDeServicosQueDesejaFazer(serviceId);
 		    // Associar o cliente e o profissional ao serviço
 		    service.addIdsSolicitacoesDeVinculacao(professionalId);
         	service.addTotalProfessionalRequested();
@@ -524,6 +524,7 @@ public class ServiceService {
                professional.setServiceStatus(ProfessionalServiceStatus.AGUARDANDO); // Define status como AGUARDANDO 
                }
 		    // Salvar o serviço
+               professionalRepository.save(professional);
 		    serviceRepository.save(service);
 
 		    // Enviar notificação por e-mail para o cliente

@@ -17,76 +17,91 @@ import jakarta.persistence.OneToMany;
 @Entity
 public class Professional extends User {
 
-    private Integer totalServicesCompleted = 0;
-    private Double averageRating = 0.0;
-    private boolean available =true;
-    private Integer totalServicesRequested = 0; 
-    private Integer servicosQueSolicitouParticipacao = 0;
-    
-    @Column(name = "specialties", nullable = true)
-    private String specialties;
-    
-    private String location;
+	private Integer totalServicesCompleted = 0;
+	private Double averageRating = 0.0;
+	private boolean available = true;
+	private Integer totalServicesRequested = 0;
+	private Integer servicosQueSolicitouParticipacao = 0;
 
-    @OneToMany(mappedBy = "professional")
-    private List<Service> services = new ArrayList<>();
-    
+	@Column(name = "specialties", nullable = true)
+	private String specialties;
 
-    @OneToMany(mappedBy = "professional")
-    private List<Rating> ratings = new ArrayList<>();
+	private String location;
 
-    @Enumerated(EnumType.STRING)
-    private ProfessionalServiceStatus serviceStatus = ProfessionalServiceStatus.ABERTO;
-    
-    private Set<Long> solicitacoesVinculacaoServico = new HashSet<>();
+	@OneToMany(mappedBy = "professional")
+	private List<Service> services = new ArrayList<>();
 
-    
-    public Professional() {
-        setType("PROFESSIONAL");
-        this.solicitacoesVinculacaoServico = new HashSet<>();
+	private Set<Long> IdDeServicosQueDesejaFazer = new HashSet<>();
 
+	@OneToMany(mappedBy = "professional")
+	private List<Rating> ratings = new ArrayList<>();
+
+	@Enumerated(EnumType.STRING)
+	private ProfessionalServiceStatus serviceStatus = ProfessionalServiceStatus.ABERTO;
+
+	private Set<Long> solicitacoesVinculacaoServico = new HashSet<>();
+
+	public Professional() {
+		setType("PROFESSIONAL");
+		this.solicitacoesVinculacaoServico = new HashSet<>();
+
+	}
+
+	public Integer getTotalServicesRequested() {
+		return totalServicesRequested;
+	}
+
+	public void incrementTotalServicesCompleted() {
+		this.totalServicesCompleted++;
+	}
+
+	public Set<Long> getIdDeServicosQueDesejaFazer() {
+		return IdDeServicosQueDesejaFazer;
+	}
+
+
+public void addIdDeServicosQueDesejaFazer(Long id) {
+    if (IdDeServicosQueDesejaFazer == null) {
+    	IdDeServicosQueDesejaFazer = new HashSet<>();
     }
-    
-    public Integer getTotalServicesRequested() {
-        return totalServicesRequested;
+    IdDeServicosQueDesejaFazer.add(id); // Se já existir, não adiciona
+}
+public void removeIdDeServicosQueDesejaFazer(Long id) {
+    if (IdDeServicosQueDesejaFazer != null) {
+        IdDeServicosQueDesejaFazer.remove(id);
     }
-    
-    public void incrementTotalServicesCompleted() {
-        this.totalServicesCompleted++;
-    }
+}
 
-    public void updateAverageRating() {
-        OptionalDouble average = ratings.stream()
-                                        .mapToDouble(Rating::getRating)
-                                        .average();
-        this.averageRating = average.orElse(0.0);
-    }
+	public void updateAverageRating() {
+		OptionalDouble average = ratings.stream().mapToDouble(Rating::getRating).average();
+		this.averageRating = average.orElse(0.0);
+	}
 
-    public boolean isAvailable() {
-        return available;
-    }
+	public boolean isAvailable() {
+		return available;
+	}
 
-    public void setAvailable(boolean available) {
-        this.available = available;
-    }
+	public void setAvailable(boolean available) {
+		this.available = available;
+	}
 
-    public String getLocation() {
-        return location;
-    }
+	public String getLocation() {
+		return location;
+	}
 
-    public void setLocation(String location) {
-        this.location = location;
-    }
+	public void setLocation(String location) {
+		this.location = location;
+	}
 
-    public Integer getTotalServicesCompleted() {
-        return totalServicesCompleted;
-    }
+	public Integer getTotalServicesCompleted() {
+		return totalServicesCompleted;
+	}
 
-    public void setTotalServicesCompleted(Integer totalServicesCompleted) {
-        this.totalServicesCompleted = totalServicesCompleted;
-    }
-    
-    public String getSpecialties() {
+	public void setTotalServicesCompleted(Integer totalServicesCompleted) {
+		this.totalServicesCompleted = totalServicesCompleted;
+	}
+
+	public String getSpecialties() {
 		return specialties;
 	}
 
@@ -95,96 +110,93 @@ public class Professional extends User {
 	}
 
 	public Double getAverageRating() {
-        return averageRating;
-    }
+		return averageRating;
+	}
 
-    public void setAverageRating(Double averageRating) {
-        this.averageRating = averageRating;
-    }
+	public void setAverageRating(Double averageRating) {
+		this.averageRating = averageRating;
+	}
 
-    public List<Service> getServices() {
-        return services;
-    }
+	public List<Service> getServices() {
+		return services;
+	}
 
-    public void setServices(List<Service> services) {
-        this.services = services != null ? services : new ArrayList<>();
-    }
+	public void setServices(List<Service> services) {
+		this.services = services != null ? services : new ArrayList<>();
+	}
 
-    public List<Rating> getRatings() {
-        return ratings;
-    }
+	public List<Rating> getRatings() {
+		return ratings;
+	}
 
-    public void setRatings(List<Rating> ratings) {
-        this.ratings = ratings != null ? ratings : new ArrayList<>();
-    }
+	public void setRatings(List<Rating> ratings) {
+		this.ratings = ratings != null ? ratings : new ArrayList<>();
+	}
 
-    public ProfessionalServiceStatus getServiceStatus() {
-        return serviceStatus;
-    }
+	public ProfessionalServiceStatus getServiceStatus() {
+		return serviceStatus;
+	}
 
-    public void setServiceStatus(ProfessionalServiceStatus serviceStatus) {
-        this.serviceStatus = serviceStatus;
-    }
+	public void setServiceStatus(ProfessionalServiceStatus serviceStatus) {
+		this.serviceStatus = serviceStatus;
+	}
 
 	public Set<Long> getSolicitacoesVinculacaoServico() {
 		return solicitacoesVinculacaoServico;
 	}
 
-    public void addIdsSolicitacoesDeVinculacao(Long idServico) {
-        if (solicitacoesVinculacaoServico == null) {
-            solicitacoesVinculacaoServico = new HashSet<>(); // Garantir inicialização se for null
-        }
-        solicitacoesVinculacaoServico.add(idServico);
-    }
-    
-    public void removeIdSolicitacaoDeVinculacao(Long idServico) {
-        if (solicitacoesVinculacaoServico != null && solicitacoesVinculacaoServico.contains(idServico)) {
-            solicitacoesVinculacaoServico.remove(idServico);
-        }
-    }
+	public void addIdsSolicitacoesDeVinculacao(Long idServico) {
+		if (solicitacoesVinculacaoServico == null) {
+			solicitacoesVinculacaoServico = new HashSet<>(); // Garantir inicialização se for null
+		}
+		solicitacoesVinculacaoServico.add(idServico);
+	}
 
-    public void addTotalServicesRequested() {
-        this.totalServicesRequested++;
-    }
+	public void removeIdSolicitacaoDeVinculacao(Long idServico) {
+		if (solicitacoesVinculacaoServico != null && solicitacoesVinculacaoServico.contains(idServico)) {
+			solicitacoesVinculacaoServico.remove(idServico);
+		}
+	}
 
-    public void solicitacoesParaCliente( ) {
-    	servicosQueSolicitouParticipacao = servicosQueSolicitouParticipacao+ 1;
-    }
+	public void addTotalServicesRequested() {
+		this.totalServicesRequested++;
+	}
+
+	public void solicitacoesParaCliente() {
+		servicosQueSolicitouParticipacao = servicosQueSolicitouParticipacao + 1;
+	}
 
 	public Integer getServicosQueSolicitouParticipacao() {
 		return servicosQueSolicitouParticipacao;
 	}
-    
 
-    public void addSpecialty(String specialty) {
-        if (this.specialties == null || this.specialties.isEmpty()) {
-            this.specialties = specialty;
-        } else {
-            // Adiciona a nova especialidade com vírgula
-            if (!this.specialties.contains(specialty)) {
-                this.specialties += "; " + specialty;
-            }
-        }
-    }
+	public void addSpecialty(String specialty) {
+		if (this.specialties == null || this.specialties.isEmpty()) {
+			this.specialties = specialty;
+		} else {
+			// Adiciona a nova especialidade com vírgula
+			if (!this.specialties.contains(specialty)) {
+				this.specialties += "; " + specialty;
+			}
+		}
+	}
 
-    
-    public void removeSpecialty(String specialty) {
-        if (this.specialties != null && !this.specialties.isEmpty()) {
-            String[] specialtiesArray = this.specialties.split("; ");
-            StringBuilder newSpecialties = new StringBuilder();
+	public void removeSpecialty(String specialty) {
+		if (this.specialties != null && !this.specialties.isEmpty()) {
+			String[] specialtiesArray = this.specialties.split("; ");
+			StringBuilder newSpecialties = new StringBuilder();
 
-            for (String s : specialtiesArray) {
-                if (!s.equalsIgnoreCase(specialty)) {
-                    if (newSpecialties.length() > 0) {
-                        newSpecialties.append("; ");
-                    }
-                    newSpecialties.append(s);
-                }
-            }
+			for (String s : specialtiesArray) {
+				if (!s.equalsIgnoreCase(specialty)) {
+					if (newSpecialties.length() > 0) {
+						newSpecialties.append("; ");
+					}
+					newSpecialties.append(s);
+				}
+			}
 
-            this.specialties = newSpecialties.toString();
-        }
-    }
+			this.specialties = newSpecialties.toString();
+		}
+	}
 
-    
 }

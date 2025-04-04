@@ -114,7 +114,10 @@ public class Service {
 	    this.professionalName = name;
 	}
     
-    
+	public Set<Long> getSolicitacoesVinculacaoServico() {
+	    return solicitacoesVinculacaoServico;
+	}
+
 	public String getProfessionalEmail() {
 		return professionalEmail;
 	}
@@ -227,6 +230,9 @@ public class Service {
 	   public void addIdsSolicitacoesDeVinculacao(Long idServico) {
 	        solicitacoesVinculacaoServico.add(idServico);
 	    }
+	   public void removeIdSolicitacaoProfissional(Long idProfissional) {
+		    solicitacoesVinculacaoProfessional.remove(idProfissional);
+		}
 
 	    public void addTotalProfessionalRequested() {
 	        this.totalProfessionalRequested = totalProfessionalRequested+1;

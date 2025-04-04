@@ -56,9 +56,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "api/users2/{email}").permitAll()
                         .requestMatchers(HttpMethod.GET, "api/professionals/{email}/specialties").hasAuthority("PROFESSIONAL")
                         .requestMatchers(HttpMethod.PUT, "/api/professionals/{email}/edit").hasAuthority("PROFESSIONAL")
-                        .requestMatchers(HttpMethod.GET, "api/professionals/{email}/profile").hasAuthority("PROFESSIONAL")
+                        .requestMatchers(HttpMethod.PUT, "/api/professionals/{email}/edit").hasAuthority("PROFESSIONAL")
+                        .requestMatchers(HttpMethod.GET, "api/professionals/me/servicos-solicitados").hasAuthority("PROFESSIONAL")
+                        .requestMatchers(HttpMethod.DELETE, "api/professionals/me/remover-solicitacao/{idServico}").hasAuthority("PROFESSIONAL")
                         .requestMatchers(HttpMethod.GET,"/api/cities").permitAll()
-                       
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class);

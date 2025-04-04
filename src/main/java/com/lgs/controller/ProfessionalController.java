@@ -1,14 +1,19 @@
 package com.lgs.controller;
 
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.tomcat.util.net.openssl.ciphers.Authentication;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,6 +35,7 @@ import com.lgs.security.TokenService;
 import com.lgs.services.ServiceService;
 
 import jakarta.mail.MessagingException;
+import jakarta.persistence.EntityNotFoundException;
 
 @RestController
 @RequestMapping("/api/professionals")
@@ -44,11 +50,92 @@ public class ProfessionalController {
 	@Autowired
 	private TokenService tokenService;
 	
-	  @Autowired
-	    private ServiceRepository serviceRepository;
-
+	@Autowired
+	private ServiceRepository serviceRepository;
+	  
     @Autowired
     private ServiceService serviceService;
+    
+    @PreAuthorize("hasRole('PROFESSIONAL')")
+    @GetMapping("/me/servicos-solicitados")
+    public ResponseEntity<?> listarMeusServicosSolicitados(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        try {
+            if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token não fornecido ou inválido.");
+            }
+
+            String token = authorizationHeader.substring(7);
+            String email = tokenService.extractEmail(token);
+
+            if (email == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token inválido.");
+            }
+
+            Professional professional = professionalRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("Profissional não encontrado."));
+
+            Set<Long> idsServicos = professional.getIdDeServicosQueDesejaFazer();
+            List<Service> servicos = serviceRepository.findAllById(idsServicos);
+
+            return ResponseEntity.ok(servicos);
+
+        } catch (UsernameNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao buscar serviços solicitados.");
+        }
+    }
+    @PreAuthorize("hasRole('PROFESSIONAL')")
+    @DeleteMapping("/me/remover-solicitacao/{idServico}")
+    public ResponseEntity<?> removerMinhaSolicitacaoDeVinculacao(
+    		@PathVariable("idServico") Long idServico,
+            @RequestHeader(value = "Authorization") String authorizationHeader) {
+        
+        try {
+            if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token não fornecido ou inválido.");
+            }
+
+            String token = authorizationHeader.substring(7);
+            String email = tokenService.extractEmail(token);
+
+            if (email == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token inválido.");
+            }
+
+            Professional professional = professionalRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("Profissional não encontrado."));
+
+            Service servico = serviceRepository.findById(idServico)
+                .orElseThrow(() -> new EntityNotFoundException("Serviço não encontrado."));
+
+            Long idProfissional = professional.getId();
+
+            if (!servico.getSolicitacoesVinculacaoServico().contains(idProfissional)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("O profissional não solicitou vínculo com este serviço.");
+            }
+
+
+            // Remove o ID do profissional da lista de solicitações
+            servico.removerSolicitacaoVinculacao(idProfissional);
+            professional.removeIdDeServicosQueDesejaFazer(idServico);
+            
+            serviceRepository.save(servico); // Salva o serviço atualizado
+            professionalRepository.save(professional); // Salva o serviço atualizado
+            System.out.println("IDs de profissionais que solicitaram o serviço: " + servico.getSolicitacoesVinculacaoProfessional());
+            System.out.println("ID do profissional autenticado: " + idProfissional);
+
+            return ResponseEntity.ok("Solicitação de vínculo removida com sucesso.");
+            
+        } catch (UsernameNotFoundException | EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao remover solicitação de vínculo.");
+        }
+    }
+
+    
     @PostMapping("/{email}/services/{serviceId}/accept")
     public ResponseEntity<?> aceitarServico(@PathVariable("email") String email, @PathVariable("serviceId") Long serviceId) {
         try {
@@ -84,7 +171,7 @@ public class ProfessionalController {
     @PreAuthorize("hasRole('PROFESSIONAL')")
     @GetMapping("/me")
     public ResponseEntity<?> listarServicosSolicitadosDoProfissional(
-            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @RequestHeader(value = "Authorization") String authorizationHeader,
             @RequestParam(value = "cidadeEstado", required = false) String cidadeEstado,
             @RequestParam(value = "status", required = false) String status,
             @RequestParam(value = "especialidade", required = false) String especialidade) {
