@@ -116,16 +116,14 @@ public class ProfessionalController {
                     .body("O profissional não solicitou vínculo com este serviço.");
             }
 
-
+            	if(professional.getEmail() != servico.getProfessionalEmail()) {
             // Remove o ID do profissional da lista de solicitações
             servico.removerSolicitacaoVinculacao(idProfissional);
             professional.removeIdDeServicosQueDesejaFazer(idServico);
-            
+            	}
             serviceRepository.save(servico); // Salva o serviço atualizado
             professionalRepository.save(professional); // Salva o serviço atualizado
-            System.out.println("IDs de profissionais que solicitaram o serviço: " + servico.getSolicitacoesVinculacaoProfessional());
-            System.out.println("ID do profissional autenticado: " + idProfissional);
-
+         
             return ResponseEntity.ok("Solicitação de vínculo removida com sucesso.");
             
         } catch (UsernameNotFoundException | EntityNotFoundException e) {
