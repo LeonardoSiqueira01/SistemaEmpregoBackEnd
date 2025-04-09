@@ -1,6 +1,8 @@
 package com.lgs.controller;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -229,7 +231,9 @@ public class ServiceController {
     @GetMapping("/me")
     public ResponseEntity<?> listarServicosDoCliente(
         @RequestHeader("Authorization") String authorizationHeader,
-        @RequestParam(value = "specialty", required = false) String specialty) {
+        @RequestParam(value = "cidadeEstado", required = false) String cidadeEstado,
+        @RequestParam(value = "specialty", required = false) String specialty,
+        @RequestParam(value = "status", required = false) String status) {
         try {
             // Verificar se o token foi passado no header
             if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
@@ -268,6 +272,21 @@ public class ServiceController {
                 int statusPriority2 = getStatusPriority(s2.getStatus());
                 return Integer.compare(statusPriority1, statusPriority2);
             });
+            if (status != null && !status.isBlank()) {
+            	services = services.stream()
+                        .filter(service -> service.getStatus() != null && status.equalsIgnoreCase(service.getStatus().name()))
+                        .collect(Collectors.toList());
+            }
+            System.out.println("cidade antes de corrigir: "+cidadeEstado);
+            
+            if (cidadeEstado != null && !cidadeEstado.isBlank()) {
+                String cidadeEstadoCorrigido = corrigirCidadeEstado(cidadeEstado);
+                System.out.println("cidadeEstadoCorrigido: "+cidadeEstadoCorrigido);
+                System.out.println("cidade antes de corrigir: "+cidadeEstado);
+                services = services.stream()
+                        .filter(service -> cidadeEstadoCorrigido.equalsIgnoreCase(getCityStateFromAddress(service.getLocation())))
+                        .collect(Collectors.toList());
+            }
 
             return ResponseEntity.ok(services);
         } catch (Exception e) {
@@ -308,6 +327,7 @@ public class ServiceController {
 
                 // Remover o estado duplicado se presente
                 String cidadeEstadoCorrigido = corrigirCidadeEstado(cidadeEstado);
+          
 
                 servicos = servicos.stream()
                         .filter(service -> cidadeEstadoCorrigido.equalsIgnoreCase(getCityStateFromAddress(service.getLocation())))
@@ -384,6 +404,8 @@ public class ServiceController {
             return ResponseEntity.status(400).body("Erro ao registrar a avaliação: " + e.getMessage());
         }
     }
+    
+    
     @PreAuthorize("hasRole('PROFESSIONAL')")
     @PostMapping("/{professionalEmail}/solicitar/{serviceId}")
     public ResponseEntity<?> solicitarServicoAoCliente(
@@ -401,12 +423,19 @@ public class ServiceController {
             // Retorna resposta com status 200 OK e o serviço solicitado
             return ResponseEntity.ok(service);
 
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Erro ao solicitar serviço: " + e.getMessage());
+        }catch (RuntimeException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("mensagem", "Erro ao solicitar serviço: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         } catch (MessagingException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao enviar e-mail: " + e.getMessage());
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("mensagem", "Erro ao enviar e-mail: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
+
     }
+    
+    
     @PostMapping("/{ProfessionalEmail}/services/{serviceId}/accept")
     public ResponseEntity<?> aceitarServico(@PathVariable("ProfessionalEmail") String ProfessionalEmail, @PathVariable("serviceId") Long serviceId) throws MessagingException {
         try {

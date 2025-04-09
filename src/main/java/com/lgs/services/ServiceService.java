@@ -513,7 +513,7 @@ public class ServiceService {
 
 		    // Verificar se o profissional está disponível para criar uma solicitação
 		    if (!professional.isAvailable()) {
-		        throw new RuntimeException("Este profissional não está disponível para criar uma solicitação.");
+		    	throw new RuntimeException("Você já está vinculado a um serviço em andamento. Finalize-o antes de solicitar um novo.");
 		    }
 		    	professional.addIdDeServicosQueDesejaFazer(serviceId);
 		    // Associar o cliente e o profissional ao serviço
